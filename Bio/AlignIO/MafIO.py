@@ -156,19 +156,55 @@ def MafIterator(handle, seq_count=None, alphabet=single_letter_alphabet):
 
                     sequence = "".join(new)
 
+                if not records:  # append the record if it is the first anchor seq.
+                    records.append(SeqRecord(Seq(sequence, alphabet),
+                                   id=line_split[1],
+                                   name=line_split[1],
+                                   description="",
+                                   annotations=anno))
+            elif line.startswith("i"):
+                # TODO: information about what is in the aligned species DNA before
+                # and after the immediately preceding "s" line
+                #  s (literal), src (ID), leftStatus, leftCount, rightStatus, rightCount
+                line_split = line.strip().split()
+                if len(line_split) != 6:
+                    raise ValueError("Error parsing alignment - 'i' line must have 6 fields")
+
+                # Everything in i line goes to anno
+                anno = {"leftStatus": line_split[2],
+                        "leftCount": int(line_split[3]),
+                        "rightStatus": line_split[4],
+                        "rightCount": int(line_split[5])}
+
                 records.append(SeqRecord(Seq(sequence, alphabet),
                                id=line_split[1],
                                name=line_split[1],
                                description="",
                                annotations=anno))
-            elif line.startswith("i"):
-                # TODO: information about what is in the aligned species DNA before
-                # and after the immediately preceding "s" line
-                pass
+                # pass
             elif line.startswith("e"):
                 # TODO: information about the size of the gap between the alignments
                 # that span the current block
-                pass
+                # e (literal), src (ID), start, size, strand, status
+                line_split = line.strip().split()
+                if len(line_split) != 7:
+                    raise ValueError("Error parsing alignment - 'e' line must have 7 fields")
+
+                # convert MAF-style +/- strand to biopython-type 1/-1
+                if line_split[4] == "+":
+                    strand = 1
+                elif line_split[4] == "-":
+                    strand = -1
+                else:
+                    strand = 1
+
+                anno = {"start": int(line_split[2]),
+                        "size": int(line_split[3]),
+                        "strand": strand,
+                        "srcSize": int(line_split[5]),
+                        "status": line_split[6]}
+                sequence = str(records[0].seq)
+                # pass
             elif line.startswith("q"):
                 # TODO: quality of each aligned base for the species.
                 # Need to find documentation on this, looks like ASCII 0-9 or gap?
