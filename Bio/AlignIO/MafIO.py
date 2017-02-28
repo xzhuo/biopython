@@ -203,7 +203,15 @@ def MafIterator(handle, seq_count=None, alphabet=single_letter_alphabet):
                         "strand": strand,
                         "srcSize": int(line_split[5]),
                         "status": line_split[6]}
-                sequence = str(records[0].seq)
+
+                # Just use all '-' as gap record sequence.
+                sequence = '-' * len(str(records[0].seq))
+
+                records.append(SeqRecord(Seq(sequence, alphabet),
+                               id=line_split[1],
+                               name=line_split[1],
+                               description="",
+                               annotations=anno))
                 # pass
             elif line.startswith("q"):
                 # TODO: quality of each aligned base for the species.
