@@ -56,15 +56,44 @@ class MafWriter(SequentialAlignmentWriter):
         else:
             strand = "+"
 
-        fields = ["s",
-                  # In the MAF file format, spaces are not allowed in the id
-                  "%-40s" % record.id.replace(" ", "_"),
-                  "%15s" % record.annotations.get("start", 0),
-                  "%5s" % record.annotations.get("size", len(str(record.seq).replace("-", ""))),
-                  strand,
-                  "%15s" % record.annotations.get("srcSize", 0),
-                  str(record.seq)]
-        self.handle.write(" ".join(fields) + "\n")
+        if record.annotations.get("type") == "aln":
+            fields = ["s",
+                      # In the MAF file format, spaces are not allowed in the id
+                      "%-40s" % record.id.replace(" ", "_"),
+                      "%15s" % record.annotations.get("start", 0),
+                      "%5s" % record.annotations.get("size", len(str(record.seq).replace("-", ""))),
+                      strand,
+                      "%15s" % record.annotations.get("srcSize", 0),
+                      str(record.seq)]
+            self.handle.write(" ".join(fields) + "\n")
+            fields = ["i",
+                      # In the MAF file format, spaces are not allowed in the id
+                      "%-40s" % record.id.replace(" ", "_"),
+                      "%1s" % record.annotations.get("leftStatus", "C"),
+                      "%5s" % record.annotations.get("leftCount", 0),
+                      "%1s" % record.annotations.get("rightStatus", 0),
+                      "%5s" % record.annotations.get("rightCout", "C")]
+            self.handle.write(" ".join(fields) + "\n")
+        elif record.annotations.get("type") == "gap":
+            fields = ["e",
+                      # In the MAF file format, spaces are not allowed in the id
+                      "%-40s" % record.id.replace(" ", "_"),
+                      "%15s" % record.annotations.get("start", 0),
+                      "%5s" % record.annotations.get("size", 0),
+                      strand,
+                      "%15s" % record.annotations.get("srcSize", 0),
+                      "%1s" % record.annotations.get("status", "C")]
+            self.handle.write(" ".join(fields) + "\n")
+        else:
+            fields = ["s",
+                      # In the MAF file format, spaces are not allowed in the id
+                      "%-40s" % record.id.replace(" ", "_"),
+                      "%15s" % record.annotations.get("start", 0),
+                      "%5s" % record.annotations.get("size", len(str(record.seq).replace("-", ""))),
+                      strand,
+                      "%15s" % record.annotations.get("srcSize", 0),
+                      str(record.seq)]
+            self.handle.write(" ".join(fields) + "\n")
 
     def write_alignment(self, alignment):
         """
@@ -139,7 +168,8 @@ def MafIterator(handle, seq_count=None, alphabet=single_letter_alphabet):
                 anno = {"start": int(line_split[2]),
                         "size": int(line_split[3]),
                         "strand": strand,
-                        "srcSize": int(line_split[5])}
+                        "srcSize": int(line_split[5]),
+                        "type": "anchor"}
 
                 sequence = line_split[6]
 
@@ -171,10 +201,11 @@ def MafIterator(handle, seq_count=None, alphabet=single_letter_alphabet):
                     raise ValueError("Error parsing alignment - 'i' line must have 6 fields")
 
                 # Everything in i line goes to anno
-                anno = {"leftStatus": line_split[2],
-                        "leftCount": int(line_split[3]),
-                        "rightStatus": line_split[4],
-                        "rightCount": int(line_split[5])}
+                anno.update = {"leftStatus": line_split[2],
+                               "leftCount": int(line_split[3]),
+                               "rightStatus": line_split[4],
+                               "rightCount": int(line_split[5]),
+                               "type": "aln"}
 
                 records.append(SeqRecord(Seq(sequence, alphabet),
                                id=line_split[1],
@@ -202,7 +233,8 @@ def MafIterator(handle, seq_count=None, alphabet=single_letter_alphabet):
                         "size": int(line_split[3]),
                         "strand": strand,
                         "srcSize": int(line_split[5]),
-                        "status": line_split[6]}
+                        "status": line_split[6],
+                        "type": "gap"}
 
                 # Just use all '-' as gap record sequence.
                 sequence = '-' * len(str(records[0].seq))
